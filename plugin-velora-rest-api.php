@@ -2,12 +2,17 @@
 /*
 Plugin Name: Velora Doček REST API
 Description: REST API za automatsko dodavanje dočeka sa Slim SEO poljima, tagom Preporuka, kategorijom Tip dočeka i poljem za custom JS/Schema.
-Version: 6.0.1
+Version: 6.0.3
 Author: Velora
-GitHub Plugin URI: https://github.com/scepa1992/novogodisnji-plugin
+X-GitHub Plugin URI: https://github.com/scepa1992/novogodisnji-plugin
 */
 
 if (!defined('ABSPATH')) exit;
+
+// Fallback repo definicija ako je header onemogućen ili uklonjen
+if (!defined('VELORA_GITHUB_REPO')) {
+    define('VELORA_GITHUB_REPO', 'scepa1992/novogodisnji-plugin');
+}
 
 /**
  * ==================================================
