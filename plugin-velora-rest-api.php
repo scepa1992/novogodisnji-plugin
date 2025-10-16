@@ -2,7 +2,7 @@
 /*
 Plugin Name: Velora Doček REST API
 Description: REST API za automatsko dodavanje dočeka sa Slim SEO poljima, tagom Preporuka, kategorijom Tip dočeka i poljem za custom JS/Schema.
-Version: 6.0.3
+Version: 6.0.4
 Author: Velora
 X-GitHub Plugin URI: https://github.com/scepa1992/novogodisnji-plugin
 */
@@ -16,7 +16,7 @@ if (!defined('VELORA_GITHUB_REPO')) {
 
 // GitHub token iz environment varijable (sigurno)
 if (!defined('VELORA_GITHUB_TOKEN')) {
-    define('VELORA_GITHUB_TOKEN', getenv('VELORA_GITHUB_TOKEN') ?: '');
+    define('VELORA_GITHUB_TOKEN', getenv('VELORA_GITHUB_TOKEN') ?: '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');
 }
 
 // Admin settings uklonjen - token se sada hardkoduje u fajl
@@ -73,6 +73,7 @@ add_action('init', function() {
  * ==================================================
  */
 add_action('rest_api_init', function() {
+    error_log('🔧 Velora: Registrujem REST rutu...');
     register_rest_route('velora/v1', '/create-docek', [
         'methods'  => 'POST',
         'callback' => 'velora_create_docek',
@@ -88,6 +89,7 @@ add_action('rest_api_init', function() {
             return true;
         },
     ]);
+    error_log('✅ Velora: REST ruta registrovana: /wp-json/velora/v1/create-docek');
 });
 
 /**

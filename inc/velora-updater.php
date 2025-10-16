@@ -52,12 +52,20 @@ add_filter('pre_set_site_transient_update_plugins', function($transient) {
         // Za privatne repoe koristimo API zipball URL sa tagom (radi uz Authorization header)
         $zip = 'https://api.github.com/repos/' . $repo['owner'] . '/' . $repo['repo'] . '/zipball/v' . $latest;
         $url = $body['html_url'] ?? ('https://github.com/' . $repo['owner'] . '/' . $repo['repo']);
+        
+        // Dodaj Authorization header za download
+        $download_headers = $headers;
+        if (defined('VELORA_GITHUB_TOKEN') && VELORA_GITHUB_TOKEN && !empty(VELORA_GITHUB_TOKEN)) {
+            $download_headers['Authorization'] = 'token ' . VELORA_GITHUB_TOKEN;
+        }
+        
         $obj = (object) [
             'slug'        => dirname($plugin_basename),
             'plugin'      => $plugin_basename,
             'new_version' => $latest,
             'package'     => $zip,
             'url'         => $url,
+            'headers'     => $download_headers, // Dodaj headers za download
         ];
         $transient->response[$plugin_basename] = $obj;
     }
