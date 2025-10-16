@@ -2,7 +2,7 @@
 /*
 Plugin Name: Velora Doček REST API
 Description: REST API za automatsko dodavanje dočeka sa Slim SEO poljima, tagom Preporuka, kategorijom Tip dočeka i poljem za custom JS/Schema.
-Version: 6.0
+Version: 6.0.1
 Author: Velora
 GitHub Plugin URI: https://github.com/tvojusername/velora-docek-rest-api
 */
