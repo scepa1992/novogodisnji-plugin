@@ -14,6 +14,13 @@ if (!defined('VELORA_GITHUB_REPO')) {
     define('VELORA_GITHUB_REPO', 'scepa1992/novogodisnji-plugin');
 }
 
+// GitHub token iz environment varijable (sigurno)
+if (!defined('VELORA_GITHUB_TOKEN')) {
+    define('VELORA_GITHUB_TOKEN', getenv('VELORA_GITHUB_TOKEN') ?: '');
+}
+
+// Admin settings uklonjen - token se sada hardkoduje u fajl
+
 /**
  * ==================================================
  *  1️⃣ Ručno povezivanje taksonomije “tip-doceka” sa CPT “docek-nove-godine”
@@ -69,7 +76,17 @@ add_action('rest_api_init', function() {
     register_rest_route('velora/v1', '/create-docek', [
         'methods'  => 'POST',
         'callback' => 'velora_create_docek',
-        'permission_callback' => '__return_true',
+        'permission_callback' => function($request) {
+            // Rate limiting: max 10 zahteva po IP-u u 5 minuta
+            $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+            $key = 'velora_rate_' . md5($ip);
+            $count = get_transient($key) ?: 0;
+            if ($count >= 10) {
+                return false;
+            }
+            set_transient($key, $count + 1, 300); // 5 minuta
+            return true;
+        },
     ]);
 });
 
@@ -80,7 +97,12 @@ add_action('rest_api_init', function() {
  */
 function velora_create_docek($request) {
     $params = $request->get_json_params();
-    $api_key = 'LZ5>ph)ZN8=)C7';
+    
+    // API ključ iz environment varijable ili wp-config konstante
+    $api_key = defined('VELORA_API_KEY') ? VELORA_API_KEY : getenv('VELORA_API_KEY');
+    if (!$api_key) {
+        $api_key = 'LZ5>ph)ZN8=)C7'; // fallback za kompatibilnost
+    }
 
     if (empty($params['key']) || $params['key'] !== $api_key) {
         return new WP_Error('invalid_key', 'Neispravan API ključ.', ['status' => 403]);

@@ -6,9 +6,17 @@ if (!defined('ABSPATH')) exit;
 
 function velora_get_github_repo_from_header() {
     $main_file = dirname(__DIR__) . '/plugin-velora-rest-api.php';
-    $data = get_file_data($main_file, [ 'github' => 'GitHub Plugin URI' ]);
-    $url  = isset($data['github']) ? trim($data['github']) : '';
-    if (!$url) return null;
+    $data = get_file_data($main_file, [ 'github' => 'GitHub Plugin URI', 'xgithub' => 'X-GitHub Plugin URI' ]);
+    $url  = '';
+    if (!empty($data['github'])) {
+        $url = trim($data['github']);
+    } elseif (!empty($data['xgithub'])) {
+        $url = trim($data['xgithub']);
+    } elseif (defined('VELORA_GITHUB_REPO')) {
+        return [ 'owner' => explode('/', VELORA_GITHUB_REPO)[0], 'repo' => explode('/', VELORA_GITHUB_REPO)[1] ];
+    } else {
+        return null;
+    }
     $parts = wp_parse_url($url);
     if (empty($parts['path'])) return null;
     $segments = array_values(array_filter(explode('/', $parts['path'])));
@@ -28,7 +36,11 @@ add_filter('pre_set_site_transient_update_plugins', function($transient) {
     $current_version = $current_data['Version'] ?? '0.0.0';
 
     $api_url  = 'https://api.github.com/repos/' . $repo['owner'] . '/' . $repo['repo'] . '/releases/latest';
-    $response = wp_remote_get($api_url, [ 'headers' => [ 'User-Agent' => 'WordPress; ' . home_url() ], 'timeout' => 10 ]);
+    $headers  = [ 'User-Agent' => 'WordPress; ' . home_url() ];
+    if (defined('VELORA_GITHUB_TOKEN') && VELORA_GITHUB_TOKEN && !empty(VELORA_GITHUB_TOKEN)) {
+        $headers['Authorization'] = 'token ' . VELORA_GITHUB_TOKEN;
+    }
+    $response = wp_remote_get($api_url, [ 'headers' => $headers, 'timeout' => 15 ]);
     if (is_wp_error($response)) return $transient;
     if (wp_remote_retrieve_response_code($response) !== 200) return $transient;
 
@@ -37,7 +49,8 @@ add_filter('pre_set_site_transient_update_plugins', function($transient) {
 
     $latest = ltrim($body['tag_name'], 'vV');
     if (version_compare($latest, $current_version, '>')) {
-        $zip = $body['zipball_url'] ?? '';
+        // Za privatne repoe koristimo API zipball URL sa tagom (radi uz Authorization header)
+        $zip = 'https://api.github.com/repos/' . $repo['owner'] . '/' . $repo['repo'] . '/zipball/v' . $latest;
         $url = $body['html_url'] ?? ('https://github.com/' . $repo['owner'] . '/' . $repo['repo']);
         $obj = (object) [
             'slug'        => dirname($plugin_basename),
