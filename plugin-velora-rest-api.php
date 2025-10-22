@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: Velora REST API
- * Plugin URI: https://github.com/velora/velora-rest-api
- * Description: REST API za kreiranje i brisanje dočeka Nove godine sa naprednim sigurnosnim funkcijama
- * Version: 7.0.0
+ * Plugin URI: https://github.com/scepa1992/novogodisnji-plugin
+ * Description: REST API za kreiranje i brisanje dočeka Nove godine sa naprednim sigurnosnim funkcijama i GitHub auto-update podrškom
+ * Version: 9.0.0
  * Author: Velora Team
  * License: GPL v2 or later
  * Text Domain: velora-rest-api
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('VELORA_PLUGIN_VERSION', '7.0.0');
+define('VELORA_PLUGIN_VERSION', '9.0.0');
 define('VELORA_PLUGIN_FILE', __FILE__);
 define('VELORA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VELORA_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -588,6 +588,73 @@ remove_action('wp_head', 'wp_generator');
 // Security: Disable file editing in admin
 if (!defined('DISALLOW_FILE_EDIT')) {
     define('DISALLOW_FILE_EDIT', true);
+}
+
+// GitHub Auto-Update System (simplified)
+add_filter('pre_set_site_transient_update_plugins', 'velora_check_github_updates');
+
+function velora_check_github_updates($transient) {
+    if (empty($transient->checked)) {
+        return $transient;
+    }
+    
+    $github_token = VeloraSecurity::get_github_token();
+    if (empty($github_token)) {
+        return $transient;
+    }
+    
+    $latest_release = velora_get_latest_release($github_token);
+    if (!$latest_release) {
+        return $transient;
+    }
+    
+    $current_version = $transient->checked[VELORA_PLUGIN_FILE];
+    $latest_version = $latest_release['tag_name'];
+    
+    if (version_compare($current_version, $latest_version, '<')) {
+        $transient->response[VELORA_PLUGIN_FILE] = (object) array(
+            'slug' => 'velora-rest-api',
+            'new_version' => $latest_version,
+            'package' => $latest_release['zipball_url'],
+            'url' => $latest_release['html_url']
+        );
+    }
+    
+    return $transient;
+}
+
+function velora_get_latest_release($github_token) {
+    $cache_key = 'velora_latest_release';
+    $cached = get_transient($cache_key);
+    
+    if ($cached !== false) {
+        return $cached;
+    }
+    
+    $url = "https://api.github.com/repos/scepa1992/novogodisnji-plugin/releases/latest";
+    $args = array(
+        'headers' => array(
+            'Authorization' => 'token ' . $github_token,
+            'Accept' => 'application/vnd.github.v3+json'
+        )
+    );
+    
+    $response = wp_remote_get($url, $args);
+    if (is_wp_error($response)) {
+        return false;
+    }
+    
+    $body = wp_remote_retrieve_body($response);
+    $data = json_decode($body, true);
+    
+    if (empty($data['tag_name'])) {
+        return false;
+    }
+    
+    // Cache for 1 hour
+    set_transient($cache_key, $data, HOUR_IN_SECONDS);
+    
+    return $data;
 }
 
 // Plugin activation hook
